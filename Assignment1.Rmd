@@ -5,7 +5,6 @@ output: html_document
 ---
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
-instalibrary(dplyr)
 library(tidyr)
 library(corrplot)
 library(ggplot2)
@@ -16,9 +15,13 @@ library(RWeka)
 knitr::opts_chunk$set(cache=TRUE, warning=FALSE, message=FALSE)
 ```
 
+#Part 1
+
 ```{r}
 sonar_data <- read.csv(file="~/Desktop/Tools/csen1061-assignment-modeling/datasets/sonar.all-data.csv", sep=",")
 ```
+
+#Part 2
 
 ```{r}
 get_metrics <- function(summary){
@@ -49,4 +52,44 @@ apply_10_fold <- function(model){
 c4.5 <- J48(R~., data=sonar_data)
 c4.5 %>% apply_all_data_set()
 c4.5 %>% apply_10_fold()
+```
+
+#Part 3
+
+Random Forest:
+
+```{r}
+random_forest <- make_Weka_classifier("weka/classifiers/trees/RandomForest")
+random_forest(R~., data=sonar_data) %>% apply_10_fold()
+```
+
+Support vector machines
+
+```{r}
+svm <- SMO(R~., data=sonar_data)
+svm %>% apply_10_fold()
+```
+
+Naive Bayes
+```{r}
+naive_bayes <- make_Weka_classifier("weka/classifiers/bayes/NaiveBayes")
+naive_bayes(R~., data=sonar_data) %>% apply_10_fold()
+```
+
+Neural Networks
+```{r}
+neural_network <- make_Weka_classifier("weka/classifiers/functions/MultilayerPerceptron")
+neural_network(R~., data=sonar_data) %>% apply_10_fold()
+```
+
+Bagging
+```{r}
+bagging <- Bagging(R~., data=sonar_data, control = Weka_control(W = list(J48, M = 30)))
+bagging %>% apply_10_fold()
+```
+
+Adaptive Boosting
+```{r}
+boosting <- AdaBoostM1(R~., data=sonar_data, control=Weka_control(W=list(J48,"--",M = 30)))
+boosting %>% apply_10_fold()
 ```
