@@ -116,11 +116,13 @@ $(document).ready(function () {
 
 <div id="part-1" class="section level1">
 <h1>Part 1</h1>
+<p>Reading the sonar data</p>
 <pre class="r"><code>sonar_data &lt;- read.csv(file=&quot;~/Desktop/Tools/csen1061-assignment-modeling/datasets/sonar.all-data.csv&quot;, sep=&quot;,&quot;)</code></pre>
 </div>
 <div id="part-2" class="section level1">
 <h1>Part 2</h1>
-<pre class="r"><code>get_metrics &lt;- function(summary){
+<p>Some helper functions</p>
+<pre class="r"><code>print_all_metrics &lt;- function(summary){
   TP &lt;- summary$confusionMatrix[1,1]
   FP &lt;- summary$confusionMatrix[2, 1]
   FN &lt;- summary$confusionMatrix[1, 2]
@@ -135,13 +137,33 @@ $(document).ready(function () {
   list(mean_absolute_error = mean_absolute_error, accuracy = accuracy, precision = precision, recall = recall, f1_score = f1_score) %&gt;% print()
 }
 
-apply_all_data_set &lt;- function(model){
-  model %&gt;% summary() %&gt;% get_metrics
+get_all_metrics &lt;- function(summary){
+  TP &lt;- summary$confusionMatrix[1,1]
+  FP &lt;- summary$confusionMatrix[2, 1]
+  FN &lt;- summary$confusionMatrix[1, 2]
+  TN &lt;- summary$confusionMatrix[2, 2]
+  mean_absolute_error &lt;- summary$details[&quot;meanAbsoluteError&quot;]
+  
+  accuracy &lt;- (TP + TN) / (TP + FP + TN + FN)
+  precision &lt;- TP / (TP + FP)
+  recall &lt;- TP / (TP + FN)
+  f1_score &lt;- 2 * precision * recall / (precision + recall)
+  
+  list(mean_absolute_error = mean_absolute_error, accuracy = accuracy, precision = precision, recall = recall, f1_score = f1_score)
+}
+get_metric &lt;- function(summary, name){
+  metrics &lt;- summary %&gt;% get_all_metrics()
+  metrics[name]
 }
 
-apply_10_fold &lt;- function(model){
-  model %&gt;% evaluate_Weka_classifier(numFolds = 10) %&gt;% get_metrics
+apply_all_data_set &lt;- function(model){
+  model %&gt;% summary() %&gt;% get_all_metrics
+}
+
+apply_10_fold &lt;- function(model, fun){
+  model %&gt;% evaluate_Weka_classifier(numFolds = 10) %&gt;% fun
 }</code></pre>
+<p>Using the C4.5 decision tree classifier and tried two methods for training/testing. The first is to train the classifier on the whole data then test it. The other method is to use the 10-fold method. The results show that using the first method, the model was over fitted to the data thus the average error was minimal compared to the second method. While in the second method since the classifier is trained on k-1 parts of the data then tested on the missing part, the data is not overfitted which is shown in the higher average error.</p>
 <pre class="r"><code>c4.5 &lt;- J48(R~., data=sonar_data)
 c4.5 %&gt;% apply_all_data_set()</code></pre>
 <pre><code>## $mean_absolute_error
@@ -159,115 +181,179 @@ c4.5 %&gt;% apply_all_data_set()</code></pre>
 ## 
 ## $f1_score
 ## [1] 0.9821429</code></pre>
-<pre class="r"><code>c4.5 %&gt;% apply_10_fold()</code></pre>
+<pre class="r"><code>c4.5 %&gt;% apply_10_fold(print_all_metrics)</code></pre>
 <pre><code>## $mean_absolute_error
 ## meanAbsoluteError 
-##         0.2834043 
+##         0.3100232 
 ## 
 ## $accuracy
-## [1] 0.7198068
+## [1] 0.6908213
 ## 
 ## $precision
-## [1] 0.7387387
+## [1] 0.7008547
 ## 
 ## $recall
 ## [1] 0.7387387
 ## 
 ## $f1_score
-## [1] 0.7387387</code></pre>
+## [1] 0.7192982</code></pre>
 </div>
 <div id="part-3" class="section level1">
 <h1>Part 3</h1>
+<p>Tried different classifiers.</p>
 <p>Random Forest:</p>
+<p>In this one, the f1 score is higher than that of the C4.5 decision tree. Which shows that using a random forest here could be more suitable.</p>
 <pre class="r"><code>random_forest &lt;- make_Weka_classifier(&quot;weka/classifiers/trees/RandomForest&quot;)
-random_forest(R~., data=sonar_data) %&gt;% apply_10_fold()</code></pre>
+random_forest(R~., data=sonar_data) %&gt;% apply_10_fold(print_all_metrics)</code></pre>
 <pre><code>## $mean_absolute_error
 ## meanAbsoluteError 
-##         0.3079227 
-## 
-## $accuracy
-## [1] 0.8405797
-## 
-## $precision
-## [1] 0.7954545
-## 
-## $recall
-## [1] 0.9459459
-## 
-## $f1_score
-## [1] 0.8641975</code></pre>
-<p>Support vector machines</p>
-<pre class="r"><code>svm &lt;- SMO(R~., data=sonar_data)
-svm %&gt;% apply_10_fold()</code></pre>
-<pre><code>## $mean_absolute_error
-## meanAbsoluteError 
-##         0.2560386 
-## 
-## $accuracy
-## [1] 0.7439614
-## 
-## $precision
-## [1] 0.75
-## 
-## $recall
-## [1] 0.7837838
-## 
-## $f1_score
-## [1] 0.7665198</code></pre>
-<p>Naive Bayes</p>
-<pre class="r"><code>naive_bayes &lt;- make_Weka_classifier(&quot;weka/classifiers/bayes/NaiveBayes&quot;)
-naive_bayes(R~., data=sonar_data) %&gt;% apply_10_fold()</code></pre>
-<pre><code>## $mean_absolute_error
-## meanAbsoluteError 
-##         0.3221188 
-## 
-## $accuracy
-## [1] 0.6714976
-## 
-## $precision
-## [1] 0.7721519
-## 
-## $recall
-## [1] 0.5495495
-## 
-## $f1_score
-## [1] 0.6421053</code></pre>
-<p>Neural Networks</p>
-<pre class="r"><code>neural_network &lt;- make_Weka_classifier(&quot;weka/classifiers/functions/MultilayerPerceptron&quot;)
-neural_network(R~., data=sonar_data) %&gt;% apply_10_fold()</code></pre>
-<pre><code>## $mean_absolute_error
-## meanAbsoluteError 
-##          0.183201 
+##         0.3066667 
 ## 
 ## $accuracy
 ## [1] 0.821256
 ## 
 ## $precision
-## [1] 0.8303571
+## [1] 0.7936508
 ## 
 ## $recall
-## [1] 0.8378378
+## [1] 0.9009009
 ## 
 ## $f1_score
-## [1] 0.8340807</code></pre>
-<p>Bagging</p>
-<pre class="r"><code>bagging &lt;- Bagging(R~., data=sonar_data, control = Weka_control(W = list(J48, M = 30)))
-bagging %&gt;% apply_10_fold()</code></pre>
+## [1] 0.8438819</code></pre>
+<p>Support vector machines</p>
+<p>In this classifier, the f1 score was less than that of the random forest, but it has less average error.</p>
+<pre class="r"><code>svm &lt;- SMO(R~., data=sonar_data)
+svm %&gt;% apply_10_fold(print_all_metrics)</code></pre>
 <pre><code>## $mean_absolute_error
 ## meanAbsoluteError 
-##         0.3636517 
+##         0.1884058 
+## 
+## $accuracy
+## [1] 0.8115942
+## 
+## $precision
+## [1] 0.8214286
+## 
+## $recall
+## [1] 0.8288288
+## 
+## $f1_score
+## [1] 0.8251121</code></pre>
+<p>Naive Bayes</p>
+<p>In this classifier, the f1 score decreased even more than that of the C4.5 decision tree so this classifier looks the worst to use for this data.</p>
+<pre class="r"><code>naive_bayes &lt;- make_Weka_classifier(&quot;weka/classifiers/bayes/NaiveBayes&quot;)
+naive_bayes(R~., data=sonar_data) %&gt;% apply_10_fold(print_all_metrics)</code></pre>
+<pre><code>## $mean_absolute_error
+## meanAbsoluteError 
+##         0.3156349 
+## 
+## $accuracy
+## [1] 0.6908213
+## 
+## $precision
+## [1] 0.7901235
+## 
+## $recall
+## [1] 0.5765766
+## 
+## $f1_score
+## [1] 0.6666667</code></pre>
+<p>Neural Networks</p>
+<p>This classifier had the highest f1 score with the least average error.</p>
+<pre class="r"><code>neural_network &lt;- make_Weka_classifier(&quot;weka/classifiers/functions/MultilayerPerceptron&quot;)
+neural_network(R~., data=sonar_data) %&gt;% apply_10_fold(print_all_metrics)</code></pre>
+<pre><code>## $mean_absolute_error
+## meanAbsoluteError 
+##         0.1831128 
+## 
+## $accuracy
+## [1] 0.826087
+## 
+## $precision
+## [1] 0.8151261
+## 
+## $recall
+## [1] 0.8738739
+## 
+## $f1_score
+## [1] 0.8434783</code></pre>
+<p>Bagging</p>
+<pre class="r"><code>bagging &lt;- Bagging(R~., data=sonar_data, control = Weka_control(W=list(J48,M=30)))
+bagging %&gt;% apply_10_fold(print_all_metrics)</code></pre>
+<pre><code>## $mean_absolute_error
+## meanAbsoluteError 
+##         0.3644926 
 ## 
 ## $accuracy
 ## [1] 0.7342995
 ## 
 ## $precision
-## [1] 0.7372881
+## [1] 0.7258065
+## 
+## $recall
+## [1] 0.8108108
+## 
+## $f1_score
+## [1] 0.7659574</code></pre>
+<p>Adaptive Boosting</p>
+<pre class="r"><code>boosting &lt;- AdaBoostM1(R~., data=sonar_data, control=Weka_control(W=list(J48,&quot;--&quot;,M=30)))
+boosting %&gt;% apply_10_fold(print_all_metrics)</code></pre>
+<pre><code>## $mean_absolute_error
+## meanAbsoluteError 
+##         0.2289527 
+## 
+## $accuracy
+## [1] 0.7729469
+## 
+## $precision
+## [1] 0.7909091
 ## 
 ## $recall
 ## [1] 0.7837838
 ## 
 ## $f1_score
-## [1] 0.7598253</code></pre>
+## [1] 0.7873303</code></pre>
+<p>Both bagging and adaptive boosting had similar f1 scores, which are both higher than using a C4.5 decision tree and not an ensemble classifier with the base as the C4.5 decision tree. This shows the use of ensemble classifiers. #Part 3</p>
+<p>Hepatitis</p>
+<pre class="r"><code>hepatitis &lt;- read.csv(file=&quot;~/Desktop/Tools/csen1061-assignment-modeling/datasets/hepatitis.data.csv&quot;, sep=&quot;,&quot;)</code></pre>
+<p>Spect</p>
+<pre class="r"><code>spect &lt;- read.csv(file=&quot;~/Desktop/Tools/csen1061-assignment-modeling/datasets/SPECT.csv&quot;, sep=&quot;,&quot;)</code></pre>
+<p>Pima-indians</p>
+<pre class="r"><code>pima &lt;- read.csv(file=&quot;~/Desktop/Tools/csen1061-assignment-modeling/datasets/pima-indians-diabetes.data.csv&quot;, sep=&quot;,&quot;)</code></pre>
+<pre class="r"><code>apply_10_fold_10_times &lt;- function(model, metric){
+  m &lt;- replicate(10, replicatemodel %&gt;% apply_10_fold(get_metric(metric)))
+  mean(m)
+}
+
+get_models &lt;- function(data, label){
+  c4.5 &lt;- J48(label, data=data)
+  
+  random_forest &lt;- make_Weka_classifier(&quot;weka/classifiers/trees/RandomForest&quot;)
+  random_forest &lt;- random_forest(label, data=data)
+  
+  svm &lt;- SMO(label, data=data)
+  
+  naive_bayes &lt;- make_Weka_classifier(&quot;weka/classifiers/bayes/NaiveBayes&quot;)
+  naive_bayes &lt;- naive_bayes(label, data=data)
+  
+  neural_network &lt;- make_Weka_classifier(&quot;weka/classifiers/functions/MultilayerPerceptron&quot;)
+  neural_network &lt;- neural_network(label, data=data)
+  
+  bagging &lt;- Bagging(label, data=data, control = Weka_control(W=list(J48,M=30)))
+  
+  boosting &lt;- AdaBoostM1(label, data=data, control=Weka_control(W=list(J48,&quot;--&quot;,M=30)))
+  
+  list(c4.5 = c4.5, random_forest = random_forest, svm = svm, naive_bayes = naive_bayes, neural_network = neural_network, bagging = bagging, boosting = boosting)
+}
+
+get_tables &lt;- function(){
+  data &lt;- c(sonar_data = sonar_data, hepatitis = hepatitis, spect = spect, pima = pima)
+  labels &lt;- c(&quot;R&quot;, &quot;X1.2&quot;, &quot;X0.11&quot;, &quot;X1&quot;)
+  metrics &lt;- c(&quot;mean_absolute_error&quot;, &quot;accuracy&quot;, &quot;precision&quot;, &quot;recall&quot;, &quot;f1_score&quot;)
+  data %&gt;% sapply(function(x) {
+     #%&gt;% sapply()
+  })
+}</code></pre>
 </div>
 
 
