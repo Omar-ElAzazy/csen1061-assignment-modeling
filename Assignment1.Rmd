@@ -1,6 +1,52 @@
 ---
 title: "Assignment1"
-output: html_document
 author: "Omar ElAzazy, 25-1136"
+output: html_document
 ---
 
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+instalibrary(dplyr)
+library(tidyr)
+library(corrplot)
+library(ggplot2)
+library(RWeka)
+```
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(cache=TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+sonar_data <- read.csv(file="~/Desktop/Tools/csen1061-assignment-modeling/datasets/sonar.all-data.csv", sep=",")
+```
+
+```{r}
+get_metrics <- function(summary){
+  TP <- summary$confusionMatrix[1,1]
+  FP <- summary$confusionMatrix[2, 1]
+  FN <- summary$confusionMatrix[1, 2]
+  TN <- summary$confusionMatrix[2, 2]
+  mean_absolute_error <- summary$details["meanAbsoluteError"]
+  
+  accuracy <- (TP + TN) / (TP + FP + TN + FN)
+  precision <- TP / (TP + FP)
+  recall <- TP / (TP + FN)
+  f1_score <- 2 * precision * recall / (precision + recall)
+  
+  list(mean_absolute_error = mean_absolute_error, accuracy = accuracy, precision = precision, recall = recall, f1_score = f1_score) %>% print()
+}
+
+apply_all_data_set <- function(model){
+  model %>% summary() %>% get_metrics
+}
+
+apply_10_fold <- function(model){
+  model %>% evaluate_Weka_classifier(numFolds = 10) %>% get_metrics
+}
+```
+
+```{r}
+c4.5 <- J48(R~., data=sonar_data)
+c4.5 %>% apply_all_data_set()
+c4.5 %>% apply_10_fold()
+```
