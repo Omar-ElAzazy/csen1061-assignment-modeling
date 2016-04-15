@@ -17,12 +17,14 @@ knitr::opts_chunk$set(cache=TRUE, warning=FALSE, message=FALSE)
 
 #Part 1
 
+Reading the sonar data
 ```{r}
 sonar_data <- read.csv(file="~/Desktop/Tools/csen1061-assignment-modeling/datasets/sonar.all-data.csv", sep=",")
 ```
 
 #Part 2
 
+Some helper functions
 ```{r}
 print_all_metrics <- function(summary){
   TP <- summary$confusionMatrix[1,1]
@@ -67,6 +69,8 @@ apply_10_fold <- function(model, fun){
 }
 ```
 
+
+Using the C4.5 decision tree classifier and tried two methods for training/testing. The first is to train the classifier on the whole data then test it. The other method is to use the 10-fold method. The results show that using the first method, the model was over fitted to the data thus the average error was minimal compared to the second method. While in the second method since the classifier is trained on k-1 parts of the data then tested on the missing part, the data is not overfitted which is shown in the higher average error.
 ```{r}
 c4.5 <- J48(R~., data=sonar_data)
 c4.5 %>% apply_all_data_set()
@@ -75,8 +79,13 @@ c4.5 %>% apply_10_fold(print_all_metrics)
 
 #Part 3
 
+Tried different classifiers.
+
+
 Random Forest:
 
+
+In this one, the f1 score is higher than that of the C4.5 decision tree. Which shows that using a random forest here could be more suitable.
 ```{r}
 random_forest <- make_Weka_classifier("weka/classifiers/trees/RandomForest")
 random_forest(R~., data=sonar_data) %>% apply_10_fold(print_all_metrics)
@@ -84,18 +93,24 @@ random_forest(R~., data=sonar_data) %>% apply_10_fold(print_all_metrics)
 
 Support vector machines
 
+
+In this classifier, the f1 score was less than that of the random forest, but it has less average error.
 ```{r}
 svm <- SMO(R~., data=sonar_data)
 svm %>% apply_10_fold(print_all_metrics)
 ```
 
 Naive Bayes
+
+In this classifier, the f1 score decreased even more than that of the C4.5 decision tree so this classifier looks the worst to use for this data.
 ```{r}
 naive_bayes <- make_Weka_classifier("weka/classifiers/bayes/NaiveBayes")
 naive_bayes(R~., data=sonar_data) %>% apply_10_fold(print_all_metrics)
 ```
 
 Neural Networks
+
+This classifier had the highest f1 score with the least average error.
 ```{r}
 neural_network <- make_Weka_classifier("weka/classifiers/functions/MultilayerPerceptron")
 neural_network(R~., data=sonar_data) %>% apply_10_fold(print_all_metrics)
@@ -113,6 +128,8 @@ boosting <- AdaBoostM1(R~., data=sonar_data, control=Weka_control(W=list(J48,"--
 boosting %>% apply_10_fold(print_all_metrics)
 ```
 
+
+Both bagging and adaptive boosting had similar f1 scores, which are both higher than using a C4.5 decision tree and not an ensemble classifier with the base as the C4.5 decision tree. This shows the use of ensemble classifiers.
 #Part 3
 
 Hepatitis
@@ -162,7 +179,7 @@ get_tables <- function(){
   labels <- c("R", "X1.2", "X0.11", "X1")
   metrics <- c("mean_absolute_error", "accuracy", "precision", "recall", "f1_score")
   data %>% sapply(function(x) {
-     %>% sapply()
+     #%>% sapply()
   })
 }
 ```
